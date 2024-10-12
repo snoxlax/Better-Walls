@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import ctypes
 import winreg
+import datetime
 from PIL import Image, ImageTk
 from screenInfo import get_monitor_info
 from imageCrop import ImageCropper
@@ -139,8 +140,12 @@ class WallpaperApp:
                 assembled_image.paste(
                     image, (monitor['Left'] - self.min_x, monitor['Top'] - self.min_y))
 
+        current_date_time = datetime.datetime.now().strftime("%d-%m-%y_%H-%M-%S")
+        file_name = "Full_Wallpaper"
+        file_name_date = f"{file_name}_{current_date_time}.jpg"
+
         save_path = filedialog.asksaveasfilename(
-            defaultextension=".jpg", initialfile="Full_Wallpaper.jpg")
+            defaultextension=".jpg", initialfile=file_name_date)
         if save_path:
             assembled_image.save(save_path)
             print(f"Assembled wallpaper saved to: {save_path}")
