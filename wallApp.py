@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
 import ctypes
 import winreg
 import datetime
@@ -21,7 +21,24 @@ class WallpaperApp:
         self.cropped_images = {}
         self.thumbnails = {}
         self.photo_images = {}
+
+        self.setup_theme()
         self.create_widgets()
+
+    def setup_theme(self):
+        self.master.configure(bg='#2C2C2C')
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+
+        self.style.configure('TButton', background='#6D2A8D',
+                             foreground='white', font=('Segoe UI', 10))
+        self.style.map('TButton', background=[('active', '#8B3CB0')])
+        self.style.configure('TFrame', background='#2C2C2C')
+
+        self.canvas_bg = '#1E1E1E'
+        self.monitor_fill = '#4A148C'
+        self.monitor_outline = '#8E24AA'
+        self.monitor_text_color = 'white'
 
     def calculate_bounds(self):
         all_coords = [(m['Left'], m['Top'], m['Right'], m['Bottom'])
@@ -39,47 +56,54 @@ class WallpaperApp:
         return min(800 / width, 600 / height)
 
     def create_widgets(self):
+        main_frame = ttk.Frame(self.master, padding="20 20 20 20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
         self.canvas = tk.Canvas(
-            self.master,
+            main_frame,
             width=(self.max_x - self.min_x) * self.scale,
-            height=(self.max_y - self.min_y) * self.scale
+            height=(self.max_y - self.min_y) * self.scale,
+            bg=self.canvas_bg,
+            highlightthickness=0
         )
-        self.canvas.pack(padx=20, pady=20)
+        self.canvas.pack(pady=20)
 
         for i, monitor in enumerate(self.monitors):
             self.draw_monitor(monitor, i)
 
-        self.assemble_button = tk.Button(
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=10)
 
-            self.master, text="Assemble Wallpaper", command=self.assemble_wallpaper, bg="lightgreen",
-            fg="black",
-            font=("Arial", 10))
-        self.assemble_button.pack(pady=5, side="left", padx=10)
+        self.assemble_button = ttk.Button(
+            button_frame, text="Assemble Wallpaper", command=self.assemble_wallpaper)
+        self.assemble_button.pack(side=tk.LEFT, padx=5)
 
-        self.exit_button = tk.Button(
-            self.master, text="Exit", command=self.master.quit, bg="lightgreen",
-            fg="black",
-            font=("Arial", 10))
-        self.exit_button.pack(pady=5, side="right", padx=10)
+        self.start_over_button = ttk.Button(
+            button_frame, text="Start Over", command=self.start_over, state=tk.DISABLED)
+        self.start_over_button.pack(side=tk.LEFT, padx=5)
 
-        self.start_over_button = tk.Button(
-            self.master, text="Start Over", command=self.start_over, state=tk.DISABLED, bg="lightgreen",
-            fg="black",
-            font=("Arial", 10))
-        self.start_over_button.pack(pady=5, side="right", padx=10)
+        self.exit_button = ttk.Button(
+            button_frame, text="Exit", command=self.master.quit)
+        self.exit_button.pack(side=tk.RIGHT, padx=5)
 
     def draw_monitor(self, monitor, index):
-        x1 = (monitor['Left'] + self.offset_x) * self.scale
-        y1 = (monitor['Top'] + self.offset_y) * self.scale
-        x2 = (monitor['Right'] + self.offset_x) * self.scale
-        y2 = (monitor['Bottom'] + self.offset_y) * self.scale
+        padding = 10
+        x1 = (monitor['Left'] + self.offset_x) * self.scale + padding
+        y1 = (monitor['Top'] + self.offset_y) * self.scale + padding
+        x2 = (monitor['Right'] + self.offset_x) * self.scale - padding
+        y2 = (monitor['Bottom'] + self.offset_y) * self.scale - padding
 
-        rect = self.canvas.create_rectangle(x1, y1, x2, y2, fill='#6D2A8D')
+        rect = self.canvas.create_rectangle(x1, y1, x2, y2,
+                                            fill=self.monitor_fill,
+                                            outline=self.monitor_outline,
+                                            width=2)
         self.canvas.tag_bind(rect, '<Button-1>', lambda e,
                              m=monitor: self.open_image_cropper(m))
 
         self.canvas.create_text((x1+x2)/2, (y1+y2)/2,
-                                text=f"Monitor {index+1}")
+                                text=f"Monitor {index+1}",
+                                fill=self.monitor_text_color,
+                                font=('Segoe UI', 12, 'bold'))
 
         if monitor['Handle'] in self.thumbnails:
             self.update_monitor_preview(
@@ -89,12 +113,13 @@ class WallpaperApp:
         file_path = filedialog.askopenfilename()
         if file_path:
             cropper_window = tk.Toplevel(self.master)
+            cropper_window.configure(bg='#2C2C2C')
             target_resolution = (
                 monitor['Right'] - monitor['Left'], monitor['Bottom'] - monitor['Top'])
             preview_size = (
                 (monitor['Right'] - monitor['Left'])/2, (monitor['Bottom'] - monitor['Top'])/2)
             cropper = ImageCropper(
-                cropper_window, target_resolution, preview_size)
+                cropper_window, target_resolution, preview_size, self.style)
             cropper.upload_image(file_path)
 
             def on_crop():
@@ -104,15 +129,16 @@ class WallpaperApp:
                     self.update_monitor_preview(monitor, cropped_image)
                 cropper_window.destroy()
 
-            crop_button = tk.Button(
+            crop_button = ttk.Button(
                 cropper_window, text="Crop and Set", command=on_crop)
             crop_button.pack(pady=10, padx=5, side="right")
 
     def update_monitor_preview(self, monitor, image):
-        x1 = (monitor['Left'] + self.offset_x) * self.scale
-        y1 = (monitor['Top'] + self.offset_y) * self.scale
-        x2 = (monitor['Right'] + self.offset_x) * self.scale
-        y2 = (monitor['Bottom'] + self.offset_y) * self.scale
+        padding = 10
+        x1 = (monitor['Left'] + self.offset_x) * self.scale + padding
+        y1 = (monitor['Top'] + self.offset_y) * self.scale + padding
+        x2 = (monitor['Right'] + self.offset_x) * self.scale - padding
+        y2 = (monitor['Bottom'] + self.offset_y) * self.scale - padding
 
         preview = image.copy()
         preview.thumbnail((int(x2-x1), int(y2-y1)))
@@ -124,6 +150,10 @@ class WallpaperApp:
         thumbnail = self.canvas.create_image((x1+x2)/2, (y1+y2)/2, image=photo)
         self.thumbnails[monitor['Handle']] = thumbnail
         self.photo_images[monitor['Handle']] = photo
+
+        self.canvas.create_rectangle(x1, y1, x2, y2,
+                                     outline=self.monitor_outline,
+                                     width=2)
 
     def assemble_wallpaper(self):
         if not self.cropped_images:
@@ -178,6 +208,7 @@ class WallpaperApp:
 
 def main():
     root = tk.Tk()
+    root.geometry("900x700")
     WallpaperApp(root)
     root.mainloop()
 

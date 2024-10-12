@@ -1,13 +1,14 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import ttk, filedialog
 from PIL import Image, ImageTk
 
 
 class ImageCropper:
-    def __init__(self, master, target_resolution, preview_size):
+    def __init__(self, master, target_resolution, preview_size, style):
         self.master = master
         self.target_resolution = target_resolution
         self.preview_size = preview_size
+        self.style = style
         self.master.title(
             f"Image Cropper - Target: {target_resolution[0]}x{target_resolution[1]}")
 
@@ -20,12 +21,17 @@ class ImageCropper:
         self.start_x = 0
         self.start_y = 0
         self.photo = None
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.master.configure(bg='#2C2C2C')
 
         self.canvas = tk.Canvas(
-            self.master, width=preview_size[0], height=preview_size[1], bg="gray")
+            self.master, width=self.preview_size[0], height=self.preview_size[1],
+            bg="#1E1E1E", highlightthickness=0)
         self.canvas.pack(pady=10, padx=5)
 
-        self.upload_button = tk.Button(
+        self.upload_button = ttk.Button(
             self.master, text="Upload Image", command=self.upload_image)
         self.upload_button.pack(pady=5)
 
@@ -83,6 +89,11 @@ class ImageCropper:
         y = (self.preview_size[1] - self.preview_image.height) // 2
         self.image_item = self.canvas.create_image(
             x, y, image=self.photo, anchor=tk.NW)
+
+        self.canvas.create_rectangle(
+            0, 0, self.preview_size[0], self.preview_size[1],
+            outline='#8E24AA', width=2
+        )
 
     def on_press(self, event):
         self.start_x = event.x
@@ -196,13 +207,18 @@ class ImageCropper:
 
 def main():
     root = tk.Tk()
+    root.configure(bg='#2C2C2C')
+    style = ttk.Style()
+    style.theme_use('clam')
+    style.configure('TButton', background='#6D2A8D',
+                    foreground='white', font=('Segoe UI', 10))
+    style.map('TButton', background=[('active', '#8B3CB0')])
 
     # Target resolution (e.g., 1920x1080)
     target_resolution = (1080, 1920)
-
     preview_size = (450, 800)
 
-    ImageCropper(root, target_resolution, preview_size)
+    ImageCropper(root, target_resolution, preview_size, style)
     root.mainloop()
 
 
