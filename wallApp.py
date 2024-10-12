@@ -74,7 +74,7 @@ class WallpaperApp:
         x2 = (monitor['Right'] + self.offset_x) * self.scale
         y2 = (monitor['Bottom'] + self.offset_y) * self.scale
 
-        rect = self.canvas.create_rectangle(x1, y1, x2, y2, fill='lightblue')
+        rect = self.canvas.create_rectangle(x1, y1, x2, y2, fill='#6D2A8D')
         self.canvas.tag_bind(rect, '<Button-1>', lambda e,
                              m=monitor: self.open_image_cropper(m))
 
