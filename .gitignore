@@ -1,0 +1,11 @@
+__pycache__/
+
+dist/
+build/
+idea/
+.vscode/
+.env/
+.env.local/
+.env.development.local/
+.env.test.local/
+.env.production.local/
