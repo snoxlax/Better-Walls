@@ -1,4 +1,5 @@
 import ctypes
+import threading
 import winreg
 import datetime
 import os
@@ -96,7 +97,7 @@ class WallpaperService:
             temp_path = temp_dir / "current_wallpaper.jpg"
             assembled_image.save(temp_path, format='JPEG', quality=90)
 
-            self.set_wallpaper(str(temp_path))
+            self.set_wallpaper_async(str(temp_path))
         except (OSError, IOError, ValueError) as e:
             print(f"Failed to create temp wallpaper: {e}")
 
@@ -116,11 +117,18 @@ class WallpaperService:
                 assembled_image.paste(
                     image, (monitor['Left'] - min_x, monitor['Top'] - min_y))
 
+        # Always create a temp file and set as wallpaper
+        temp_dir = self.get_cache_dir() / "temp"
+        temp_dir.mkdir(exist_ok=True)
+        temp_path = temp_dir / "assembled_wallpaper.jpg"
+        assembled_image.save(temp_path, format='JPEG', quality=90)
+        self.set_wallpaper_async(str(temp_path))
+
+        # If user chose a save path, also save there
         if save_path:
             assembled_image.save(save_path)
             print(f"Assembled wallpaper saved to: {save_path}")
             self.last_save_dir = os.path.dirname(save_path)
-            self.set_wallpaper(save_path)
 
         return assembled_image
 
@@ -133,10 +141,20 @@ class WallpaperService:
             winreg.SetValueEx(key, "TileWallpaper", 0, winreg.REG_SZ, "0")
             winreg.CloseKey(key)
 
-            ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 0)
+            ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
             ctypes.windll.user32.UpdatePerUserSystemParameters(1)
         except (OSError, PermissionError, FileNotFoundError) as e:
             print(f"Failed to set wallpaper: {e}")
+
+    def set_wallpaper_async(self, image_path):
+        """Run wallpaper change in a background thread"""
+        def set_wallpaper_with_delay():
+            import time
+            time.sleep(0.1)  # Small delay to ensure file is fully written
+            self.set_wallpaper(image_path)
+
+        thread = threading.Thread(target=set_wallpaper_with_delay, daemon=True)
+        thread.start()
 
     def generate_filename(self):
         """Generate a filename with current date and time"""
