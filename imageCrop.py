@@ -1,23 +1,40 @@
 import tkinter as tk
-from tkinter import ttk, filedialog
-from PIL import Image, ImageTk
+from tkinter import ttk, filedialog, messagebox
+from PIL import Image, ImageOps, ImageTk
+
+IMAGE_FILETYPES = [
+    ("Images", "*.jpg *.jpeg *.png *.bmp *.gif *.webp *.tif *.tiff"),
+    ("All files", "*.*"),
+]
+
+
+def load_image(file_path):
+    """Open an image fully into memory (so the file isn't locked), applying EXIF rotation"""
+    with Image.open(file_path) as img:
+        image = ImageOps.exif_transpose(img)
+        image.load()
+    if image.mode not in ('RGB', 'RGBA'):
+        image = image.convert('RGBA')
+    return image
 
 
 class ImageCropper:
     def __init__(self, master, target_resolution, preview_size, style):
         self.master = master
         self.target_resolution = target_resolution
-        self.preview_size = preview_size
+        self.preview_size = (int(preview_size[0]), int(preview_size[1]))
         self.style = style
         self.master.title(
             f"Image Cropper - Target: {target_resolution[0]}x{target_resolution[1]}")
 
         self.original_image = None
-        self.preview_image = None
         self.image_item = None
         self.scale_factor = 1
         self.zoom_factor = 1
         self.min_zoom_factor = 1
+        # Position of the (virtually) scaled image's top-left corner on the canvas
+        self.offset_x = 0
+        self.offset_y = 0
         self.start_x = 0
         self.start_y = 0
         self.photo = None
@@ -40,12 +57,20 @@ class ImageCropper:
         self.canvas.bind("<MouseWheel>", self.on_mousewheel)
 
     def upload_image(self, file_path=None):
+        """Load an image into the cropper. Returns True on success."""
         if not file_path:
-            file_path = filedialog.askopenfilename()
-        if file_path:
-            self.original_image = Image.open(file_path)
-            self.create_preview_image()
-            self.show_image()
+            file_path = filedialog.askopenfilename(
+                parent=self.master, filetypes=IMAGE_FILETYPES)
+        if not file_path:
+            return False
+        try:
+            self.original_image = load_image(file_path)
+        except (OSError, Image.DecompressionBombError) as e:
+            messagebox.showerror(
+                "Can't open image", f"{file_path}\n\n{e}", parent=self.master)
+            return False
+        self.create_preview_image()
+        return True
 
     def create_preview_image(self):
         width_ratio = self.preview_size[0] / self.target_resolution[0]
@@ -53,14 +78,13 @@ class ImageCropper:
         self.scale_factor = min(width_ratio, height_ratio)
 
         self.min_zoom_factor = self.calculate_min_zoom_factor()
+        self.zoom_factor = self.min_zoom_factor
 
-        if self.original_image.width >= self.target_resolution[0] or self.original_image.height >= self.target_resolution[1]:
-            self.zoom_factor = self.min_zoom_factor
-        else:
-            self.zoom_factor = max(self.preview_size[0] / (self.original_image.width * self.scale_factor),
-                                   self.preview_size[1] / (self.original_image.height * self.scale_factor))
-
-        self.update_preview_image()
+        # Center the image in the preview
+        width, height = self.scaled_size()
+        self.offset_x = (self.preview_size[0] - width) / 2
+        self.offset_y = (self.preview_size[1] - height) / 2
+        self.render()
 
     def calculate_min_zoom_factor(self):
         width_zoom = self.preview_size[0] / \
@@ -69,63 +93,64 @@ class ImageCropper:
             (self.original_image.height * self.scale_factor)
         return max(width_zoom, height_zoom)
 
-    def update_preview_image(self):
-        new_size = (
-            int(self.original_image.width * self.scale_factor * self.zoom_factor),
-            int(self.original_image.height * self.scale_factor * self.zoom_factor)
-        )
-        self.preview_image = self.original_image.copy()
-        self.preview_image.thumbnail(new_size, Image.Resampling.LANCZOS)
-        self.update_photo()
+    def effective_scale(self):
+        return self.scale_factor * self.zoom_factor
 
-    def update_photo(self):
-        self.photo = ImageTk.PhotoImage(self.preview_image)
+    def scaled_size(self):
+        scale = self.effective_scale()
+        return self.original_image.width * scale, self.original_image.height * scale
 
-    def show_image(self):
+    def visible_box(self):
+        """Region of the original image currently shown in the preview"""
+        scale = self.effective_scale()
+        left = -self.offset_x / scale
+        top = -self.offset_y / scale
+        right = min(left + self.preview_size[0] / scale, self.original_image.width)
+        bottom = min(top + self.preview_size[1] / scale, self.original_image.height)
+        return (max(0, left), max(0, top), right, bottom)
+
+    def render(self):
+        """Draw only the visible part of the image, scaled to the preview size"""
+        preview = self.original_image.resize(
+            self.preview_size, Image.Resampling.LANCZOS,
+            box=self.visible_box(), reducing_gap=2.0)
+        self.photo = ImageTk.PhotoImage(preview)
+
         if self.image_item:
-            self.canvas.delete(self.image_item)
+            self.canvas.itemconfigure(self.image_item, image=self.photo)
+        else:
+            self.image_item = self.canvas.create_image(
+                0, 0, image=self.photo, anchor=tk.NW)
+            self.canvas.create_rectangle(
+                0, 0, self.preview_size[0], self.preview_size[1],
+                outline='#8E24AA', width=2
+            )
 
-        x = (self.preview_size[0] - self.preview_image.width) // 2
-        y = (self.preview_size[1] - self.preview_image.height) // 2
-        self.image_item = self.canvas.create_image(
-            x, y, image=self.photo, anchor=tk.NW)
-
-        self.canvas.create_rectangle(
-            0, 0, self.preview_size[0], self.preview_size[1],
-            outline='#8E24AA', width=2
-        )
+    def constrain_offset(self):
+        """Keep the image covering the whole preview"""
+        width, height = self.scaled_size()
+        self.offset_x = max(min(self.offset_x, 0), self.preview_size[0] - width)
+        self.offset_y = max(min(self.offset_y, 0), self.preview_size[1] - height)
 
     def on_press(self, event):
         self.start_x = event.x
         self.start_y = event.y
 
     def on_drag(self, event):
-        if not self.image_item:
+        if not self.original_image:
             return
 
-        dx = event.x - self.start_x
-        dy = event.y - self.start_y
-
-        x, y = self.canvas.coords(self.image_item)
-
-        new_x = x + dx
-        new_y = y + dy
-
-        new_x = max(min(new_x, 0),
-                    self.preview_size[0] - self.preview_image.width)
-        new_y = max(min(new_y, 0),
-                    self.preview_size[1] - self.preview_image.height)
-
-        self.canvas.moveto(self.image_item, new_x, new_y)
+        self.offset_x += event.x - self.start_x
+        self.offset_y += event.y - self.start_y
+        self.constrain_offset()
+        self.render()
 
         self.start_x = event.x
         self.start_y = event.y
 
     def on_mousewheel(self, event):
-        if event.delta > 0:
-            self.zoom_in()
-        else:
-            self.zoom_out()
+        factor = 1.1 if event.delta > 0 else 0.9
+        self.apply_zoom(factor, event.x, event.y)
 
     def zoom_in(self):
         self.apply_zoom(1.1)
@@ -133,76 +158,38 @@ class ImageCropper:
     def zoom_out(self):
         self.apply_zoom(0.9)
 
-    def apply_zoom(self, factor):
+    def apply_zoom(self, factor, anchor_x=None, anchor_y=None):
+        """Zoom keeping the point under (anchor_x, anchor_y) fixed; defaults to preview center"""
         if not self.original_image:
             return
 
-        new_zoom_factor = self.zoom_factor * factor
-
-        if new_zoom_factor < self.min_zoom_factor:
-            new_zoom_factor = self.min_zoom_factor
-
-        if new_zoom_factor != self.zoom_factor:
-            self.zoom_factor = new_zoom_factor
-            self.update_preview_image()
-
-            x, y = self.canvas.coords(self.image_item)
-            center_x = x + self.preview_image.width / 2
-            center_y = y + self.preview_image.height / 2
-
-            self.canvas.delete(self.image_item)
-            new_x = center_x - self.preview_image.width / 2
-            new_y = center_y - self.preview_image.height / 2
-            self.image_item = self.canvas.create_image(
-                new_x, new_y, image=self.photo, anchor=tk.NW)
-
-            self.constrain_image()
-
-    def constrain_image(self):
-        if not self.image_item:
+        new_zoom_factor = max(self.zoom_factor * factor, self.min_zoom_factor)
+        if new_zoom_factor == self.zoom_factor:
             return
 
-        x, y = self.canvas.coords(self.image_item)
+        if anchor_x is None:
+            anchor_x = self.preview_size[0] / 2
+        if anchor_y is None:
+            anchor_y = self.preview_size[1] / 2
 
-        if self.preview_image.width <= self.preview_size[0]:
-            x = (self.preview_size[0] - self.preview_image.width) // 2
-        else:
-            x = max(min(x, 0), self.preview_size[0] - self.preview_image.width)
+        old_scale = self.effective_scale()
+        image_x = (anchor_x - self.offset_x) / old_scale
+        image_y = (anchor_y - self.offset_y) / old_scale
 
-        if self.preview_image.height <= self.preview_size[1]:
-            y = (self.preview_size[1] - self.preview_image.height) // 2
-        else:
-            y = max(
-                min(y, 0), self.preview_size[1] - self.preview_image.height)
+        self.zoom_factor = new_zoom_factor
+        new_scale = self.effective_scale()
+        self.offset_x = anchor_x - image_x * new_scale
+        self.offset_y = anchor_y - image_y * new_scale
 
-        self.canvas.moveto(self.image_item, x, y)
+        self.constrain_offset()
+        self.render()
 
     def crop_image(self):
         if not self.original_image:
             return None
 
-        x, y = self.canvas.coords(self.image_item)
-        crop_area = (
-            int(-x / (self.scale_factor * self.zoom_factor)),
-            int(-y / (self.scale_factor * self.zoom_factor)),
-            int((-x + self.preview_size[0]) /
-                (self.scale_factor * self.zoom_factor)),
-            int((-y + self.preview_size[1]) /
-                (self.scale_factor * self.zoom_factor))
-        )
-
-        crop_area = (
-            max(0, crop_area[0]),
-            max(0, crop_area[1]),
-            min(self.original_image.width, crop_area[2]),
-            min(self.original_image.height, crop_area[3])
-        )
-
-        cropped_image = self.original_image.crop(crop_area)
-        cropped_image = cropped_image.resize(
-            self.target_resolution, Image.Resampling.LANCZOS)
-
-        return cropped_image
+        return self.original_image.resize(
+            self.target_resolution, Image.Resampling.LANCZOS, box=self.visible_box())
 
 
 def main():

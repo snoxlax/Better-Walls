@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import ctypes
 import os
 from PIL import Image, ImageTk
 from screenInfo import get_monitor_info
-from imageCrop import ImageCropper
+from imageCrop import ImageCropper, IMAGE_FILETYPES
 from wallpaperService import WallpaperService
 
 
@@ -119,19 +120,24 @@ class WallpaperApp:
 
     def open_image_cropper(self, monitor):
         file_path = filedialog.askopenfilename(
-            initialdir=self.ui['last_open_dir'])
+            initialdir=self.ui['last_open_dir'], filetypes=IMAGE_FILETYPES)
         if file_path:
 
             self.ui['last_open_dir'] = os.path.dirname(file_path)
             cropper_window = tk.Toplevel(self.master)
             cropper_window.configure(bg='#2C2C2C')
-            target_resolution = (
-                monitor['Right'] - monitor['Left'], monitor['Bottom'] - monitor['Top'])
-            preview_size = (
-                (monitor['Right'] - monitor['Left'])/2, (monitor['Bottom'] - monitor['Top'])/2)
+            target_w = monitor['Right'] - monitor['Left']
+            target_h = monitor['Bottom'] - monitor['Top']
+            target_resolution = (target_w, target_h)
+            # Half the monitor size, but small enough to fit on screen
+            preview_scale = min(0.5, 1200 / target_w, 750 / target_h)
+            preview_size = (int(target_w * preview_scale),
+                            int(target_h * preview_scale))
             cropper = ImageCropper(
                 cropper_window, target_resolution, preview_size, self.style)
-            cropper.upload_image(file_path)
+            if not cropper.upload_image(file_path):
+                cropper_window.destroy()
+                return
 
             def on_crop():
                 cropped_image = cropper.crop_image()
@@ -223,7 +229,20 @@ class WallpaperApp:
                 self.monitors, self.images['cropped'], (self.min_x, self.min_y, self.max_x, self.max_y), save_path)
 
 
+def enable_dpi_awareness():
+    """Make Windows report real pixel coordinates instead of DPI-scaled ones.
+    Must run before any window is created."""
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor aware (Win 8.1+)
+    except (AttributeError, OSError):
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except (AttributeError, OSError):
+            pass
+
+
 def main():
+    enable_dpi_awareness()
     root = tk.Tk()
 
     WallpaperApp(root)
