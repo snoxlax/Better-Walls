@@ -99,7 +99,8 @@ Better-Walls/
 ├── imageCrop.py        # Image cropping widget
 ├── screenInfo.py       # Monitor detection
 ├── README.md           # This file
-└── icon.ico            # App icon
+├── horizon.ico         # App icon
+└── horizon.svg         # App icon source
 ```
 
 #### Requirements

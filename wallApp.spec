@@ -1,11 +1,13 @@
-# -*- mode: python ; coding: utf-8 -*-
+# PyInstaller build spec. Analysis, PYZ and EXE are provided by PyInstaller.
+# ruff: noqa: F821
+# pyright: reportUndefinedVariable=false
 
 
 a = Analysis(
     ['wallApp.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('horizon.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +37,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['icon.ico'],
+    icon=['horizon.ico'],
 )

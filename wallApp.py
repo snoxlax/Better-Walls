@@ -1,11 +1,17 @@
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
 import ctypes
 import os
+import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+from typing import Any
+
 from PIL import Image, ImageTk
+
+from imageCrop import IMAGE_FILETYPES, ImageCropper
 from screenInfo import get_monitor_info
-from imageCrop import ImageCropper, IMAGE_FILETYPES
 from wallpaperService import WallpaperService
+
+APP_ICON = 'horizon.ico'
 
 
 class WallpaperApp:
@@ -20,7 +26,7 @@ class WallpaperApp:
         self.offset_y = -self.min_y
 
         # Group related attributes
-        self.ui = {
+        self.ui: dict[str, Any] = {
             'canvas': None,
             'last_open_dir': None
         }
@@ -241,9 +247,30 @@ def enable_dpi_awareness():
             pass
 
 
+def resource_path(name):
+    """Path to a bundled file, both from source and inside a PyInstaller exe"""
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, name)
+
+
+def set_app_icon(root):
+    """Use our icon for all windows and give the app its own taskbar entry
+    (otherwise Windows groups it under python.exe's icon)"""
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            "BetterWalls.App")
+    except (AttributeError, OSError):
+        pass
+    try:
+        root.iconbitmap(default=resource_path(APP_ICON))
+    except tk.TclError:
+        pass
+
+
 def main():
     enable_dpi_awareness()
     root = tk.Tk()
+    set_app_icon(root)
 
     WallpaperApp(root)
     root.mainloop()
