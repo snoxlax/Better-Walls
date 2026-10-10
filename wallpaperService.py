@@ -1,9 +1,10 @@
 import ctypes
-import threading
-import winreg
 import datetime
 import os
+import threading
+import winreg
 from pathlib import Path
+
 from PIL import Image, UnidentifiedImageError
 
 
@@ -98,7 +99,7 @@ class WallpaperService:
             assembled_image.save(temp_path, format='JPEG', quality=90)
 
             self.set_wallpaper_async(str(temp_path))
-        except (OSError, IOError, ValueError) as e:
+        except (OSError, ValueError) as e:
             print(f"Failed to create temp wallpaper: {e}")
 
     def assemble_wallpaper(self, monitors, cropped_images, bounds, save_path=None):
