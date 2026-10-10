@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs><clipPath id="tiles"><rect x="34" y="64" width="54" height="112" rx="8"/><rect x="101" y="84" width="54" height="112" rx="8"/><rect x="168" y="72" width="54" height="112" rx="8"/></clipPath></defs>
+<rect width="256" height="256" rx="56" fill="#0F1419"/>
+<g clip-path="url(#tiles)">
+<rect width="256" height="256" fill="#2E4F80"/>
+<rect y="118" width="256" height="40" fill="#F28C5B"/>
+<circle cx="128" cy="150" r="28" fill="#FFD27A"/>
+<rect y="158" width="256" height="98" fill="#173052"/>
+<rect x="110" y="166" width="36" height="4" rx="2" fill="#FFD27A"/>
+<rect x="117" y="176" width="22" height="4" rx="2" fill="#FFD27A"/>
+</g>
+</svg>
