@@ -22,6 +22,7 @@ def get_monitor_info():
         ]
 
         def __init__(self):
+            super().__init__()
             self.cbSize = ctypes.sizeof(MONITORINFO)
 
     def callback(hMonitor, _hdcMonitor, _lprcMonitor, _dwData):

@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
+
 from PIL import Image, ImageOps, ImageTk
 
 IMAGE_FILETYPES = [
@@ -27,7 +28,7 @@ class ImageCropper:
         self.master.title(
             f"Image Cropper - Target: {target_resolution[0]}x{target_resolution[1]}")
 
-        self.original_image = None
+        self.original_image: Image.Image | None = None
         self.image_item = None
         self.scale_factor = 1
         self.zoom_factor = 1
@@ -86,11 +87,17 @@ class ImageCropper:
         self.offset_y = (self.preview_size[1] - height) / 2
         self.render()
 
+    @property
+    def image(self) -> Image.Image:
+        """The loaded image; only call after a successful upload_image()"""
+        assert self.original_image is not None
+        return self.original_image
+
     def calculate_min_zoom_factor(self):
         width_zoom = self.preview_size[0] / \
-            (self.original_image.width * self.scale_factor)
+            (self.image.width * self.scale_factor)
         height_zoom = self.preview_size[1] / \
-            (self.original_image.height * self.scale_factor)
+            (self.image.height * self.scale_factor)
         return max(width_zoom, height_zoom)
 
     def effective_scale(self):
@@ -98,20 +105,20 @@ class ImageCropper:
 
     def scaled_size(self):
         scale = self.effective_scale()
-        return self.original_image.width * scale, self.original_image.height * scale
+        return self.image.width * scale, self.image.height * scale
 
     def visible_box(self):
         """Region of the original image currently shown in the preview"""
         scale = self.effective_scale()
         left = -self.offset_x / scale
         top = -self.offset_y / scale
-        right = min(left + self.preview_size[0] / scale, self.original_image.width)
-        bottom = min(top + self.preview_size[1] / scale, self.original_image.height)
+        right = min(left + self.preview_size[0] / scale, self.image.width)
+        bottom = min(top + self.preview_size[1] / scale, self.image.height)
         return (max(0, left), max(0, top), right, bottom)
 
     def render(self):
         """Draw only the visible part of the image, scaled to the preview size"""
-        preview = self.original_image.resize(
+        preview = self.image.resize(
             self.preview_size, Image.Resampling.LANCZOS,
             box=self.visible_box(), reducing_gap=2.0)
         self.photo = ImageTk.PhotoImage(preview)
