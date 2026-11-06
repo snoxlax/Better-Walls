@@ -16,6 +16,12 @@ Windows can't do it well. Better-Walls draws your real screens and lets you crop
 
 </div>
 
+## Download
+
+**[⬇ Download Better-Walls.exe](https://github.com/snoxlax/Better-Walls/releases/latest)** from the latest release. It's a single file: no install and no Python needed. Just run it on Windows 10 or 11.
+
+Windows SmartScreen may warn that the app is from an unknown publisher, because it isn't code-signed. Choose **More info → Run anyway**.
+
 ## Why
 
 Windows' own settings stretch or tile one image across mixed monitors, and portrait screens, different resolutions or offset displays end up misaligned. Better-Walls works from your **actual monitor layout**: every screen gets its own image, cropped to its exact resolution, then stitched into one spanning wallpaper that lines up across all of them.
@@ -43,6 +49,8 @@ Windows' own settings stretch or tile one image across mixed monitors, and portr
 
 ## Getting started
 
+Just want to use the app? Grab the exe from [Download](#download). The steps below are for running or building it yourself.
+
 ### Requirements
 
 - **Windows 10 or 11**
@@ -66,7 +74,16 @@ pip install pyinstaller
 pyinstaller --noconfirm wallApp.spec
 ```
 
-The result is `dist/wallApp.exe`. Once built, it runs on any Windows 10/11 PC **without Python**, so you can copy it to another machine or pin it to the taskbar. Windows SmartScreen may warn about an unsigned app: choose **More info → Run anyway**.
+The result is `dist/wallApp.exe`. Once built, it runs on any Windows 10/11 PC **without Python**, so you can copy it to another machine or pin it to the taskbar.
+
+### Releases
+
+Releases are built automatically by [GitHub Actions](.github/workflows/release.yml): pushing a version tag builds the exe on GitHub's Windows machines and publishes it as a release.
+
+```bash
+git tag v1.1
+git push origin v1.1
+```
 
 ## How it works
 
