@@ -3,6 +3,8 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageOps, ImageTk
 
+import theme
+
 IMAGE_FILETYPES = [
     ("Images", "*.jpg *.jpeg *.png *.bmp *.gif *.webp *.tif *.tiff"),
     ("All files", "*.*"),
@@ -20,13 +22,15 @@ def load_image(file_path):
 
 
 class ImageCropper:
-    def __init__(self, master, target_resolution, preview_size, style):
+    def __init__(self, master, target_resolution, preview_size, style,
+                 display_name="Display"):
         self.master = master
         self.target_resolution = target_resolution
         self.preview_size = (int(preview_size[0]), int(preview_size[1]))
         self.style = style
+        self.display_name = display_name
         self.master.title(
-            f"Image Cropper - Target: {target_resolution[0]}x{target_resolution[1]}")
+            f"Crop for {display_name} ({target_resolution[0]} × {target_resolution[1]})")
 
         self.original_image: Image.Image | None = None
         self.image_item = None
@@ -42,16 +46,37 @@ class ImageCropper:
         self.setup_ui()
 
     def setup_ui(self):
-        self.master.configure(bg='#2C2C2C')
+        self.master.configure(bg=theme.BG)
+        self.master.resizable(False, False)
+
+        # Top bar: which screen this is for, and how to use the frame
+        top = ttk.Frame(self.master, style='Bar.TFrame', padding=(20, 12))
+        top.pack(fill=tk.X)
+        w, h = self.target_resolution
+        ttk.Label(top, text=self.display_name, style='BarTitle.TLabel').pack(
+            side=tk.LEFT)
+        ttk.Label(top, text=f"{w} × {h}", style='BarDim.TLabel').pack(
+            side=tk.LEFT, padx=(10, 0))
+        self.zoom_label = ttk.Label(top, style='BarDim.TLabel')
+        self.zoom_label.pack(side=tk.RIGHT)
 
         self.canvas = tk.Canvas(
             self.master, width=self.preview_size[0], height=self.preview_size[1],
-            bg="#1E1E1E", highlightthickness=0)
-        self.canvas.pack(pady=10, padx=5)
+            bg=theme.DESK, highlightthickness=1,
+            highlightbackground=theme.LINE_STRONG, cursor='fleur')
+        self.canvas.pack(padx=20, pady=(20, 10))
+        self.hint_label = ttk.Label(self.master, style='Dim.TLabel')
+        self.hint_label.pack(pady=(0, 14))
 
+        # Bottom bar: swap image on the left; the caller adds actions on the right
+        bottom = ttk.Frame(self.master, style='Bar.TFrame', padding=(20, 12))
+        bottom.pack(fill=tk.X)
         self.upload_button = ttk.Button(
-            self.master, text="Upload Image", command=self.upload_image)
-        self.upload_button.pack(pady=5)
+            bottom, text="Change image…", style='BarGhost.TButton',
+            command=self.upload_image)
+        self.upload_button.pack(side=tk.LEFT)
+        self.actions = ttk.Frame(bottom, style='Bar.TFrame')
+        self.actions.pack(side=tk.RIGHT)
 
         self.canvas.bind("<ButtonPress-1>", self.on_press)
         self.canvas.bind("<B1-Motion>", self.on_drag)
@@ -128,10 +153,22 @@ class ImageCropper:
         else:
             self.image_item = self.canvas.create_image(
                 0, 0, image=self.photo, anchor=tk.NW)
-            self.canvas.create_rectangle(
-                0, 0, self.preview_size[0], self.preview_size[1],
-                outline='#8E24AA', width=2
-            )
+        zoom = self.zoom_factor / self.min_zoom_factor
+        self.zoom_label.configure(text=f"{zoom:.0%}")
+
+        # An image with the screen's exact shape fills the frame at 100%,
+        # leaving nothing to drag until you zoom in; say so instead of
+        # leaving the frame feeling stuck.
+        width, height = self.scaled_size()
+        can_pan = (width > self.preview_size[0] + 1
+                   or height > self.preview_size[1] + 1)
+        if can_pan:
+            self.hint_label.configure(text="Drag to move  ·  Scroll to zoom")
+            self.canvas.configure(cursor='fleur')
+        else:
+            self.hint_label.configure(
+                text="Image already fits this screen  ·  Scroll to zoom in")
+            self.canvas.configure(cursor='')
 
     def constrain_offset(self):
         """Keep the image covering the whole preview"""
@@ -201,15 +238,10 @@ class ImageCropper:
 
 def main():
     root = tk.Tk()
-    root.configure(bg='#2C2C2C')
-    style = ttk.Style()
-    style.theme_use('clam')
-    style.configure('TButton', background='#6D2A8D',
-                    foreground='white', font=('Segoe UI', 10))
-    style.map('TButton', background=[('active', '#8B3CB0')])
+    style = theme.apply_theme(root)
 
     target_resolution = (1080, 1920)
-    preview_size = (450, 800)
+    preview_size = (382, 680)
 
     ImageCropper(root, target_resolution, preview_size, style)
     root.mainloop()

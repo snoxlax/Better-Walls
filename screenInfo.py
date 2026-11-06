@@ -38,7 +38,10 @@ def get_monitor_info():
             "Left": monitor_info.rcMonitor.left,
             "Top": monitor_info.rcMonitor.top,
             "Right": monitor_info.rcMonitor.right,
-            "Bottom": monitor_info.rcMonitor.bottom
+            "Bottom": monitor_info.rcMonitor.bottom,
+            # Usable area (excludes the taskbar), for placing our windows
+            "Work": (monitor_info.rcWork.left, monitor_info.rcWork.top,
+                     monitor_info.rcWork.right, monitor_info.rcWork.bottom),
         })
         return True
 
