@@ -1,144 +1,88 @@
+<div align="center">
+
+<img src="horizon.svg" width="96" alt="Better-Walls icon">
+
 # Better-Walls
 
-A powerful multi-monitor wallpaper manager for Windows that lets you choose and set wallpapers better than the default Windows personalization settings. Perfect for multi-monitor setups with real-time preview.
+**A different, perfectly cropped wallpaper on every monitor.**
+Windows can't do it well. Better-Walls draws your real screens and lets you crop each one.
 
-### Features
+![Windows](https://custom-icon-badges.demolab.com/badge/Windows_10%20%7C%2011-0078D4?style=flat&logo=windows11&logoColor=white)
+![Python](https://img.shields.io/badge/Python_3.10+-3776AB?style=flat&logo=python&logoColor=white)
+![Tkinter](https://img.shields.io/badge/UI-Tkinter-F28C5B?style=flat)
+![Pillow](https://img.shields.io/badge/Images-Pillow-2E4F80?style=flat)
 
-- Easily choose and set wallpapers across multiple monitors
-- Crop wallpapers to fit your screens
-- Save custom wallpaper setups for future use
-- Intuitive UI to manage wallpapers better than default settings
+<img src="docs/main-window.png" width="760" alt="Better-Walls main window showing four monitors in their real layout, three with wallpapers and one empty">
 
-- **Automatic monitor detection** - Detects all connected monitors and their positions
-- **Visual monitor layout** - See your monitor setup in a scaled preview
-- **Per-monitor customization** - Set different images for each monitor
-- Continuous development with new features planned
+</div>
 
-### How to Use
+## Why
 
-1. **Launch the app** - It will automatically detect your monitors
-2. **Click any monitor** - Select an image and crop it to fit perfectly
-3. **See instant results** - Your wallpaper updates immediately
-4. **Repeat for other monitors** - Each monitor can have its own image
-5. **Save when ready** - Use "Assemble Wallpaper" to save a permanent version
+Windows' own settings stretch or tile one image across mixed monitors, and portrait screens, different resolutions or offset displays end up misaligned. Better-Walls works from your **actual monitor layout**: every screen gets its own image, cropped to its exact resolution, then stitched into one spanning wallpaper that lines up across all of them.
 
-### Image Handling
+## Features
 
-- **Real-time cropping** - Interactive image cropper with pan, zoom, and precise selection
-- **Smart image processing** - Handles RGBA/transparency automatically
-- **Format support** - Works with JPEG, PNG, and other common formats
-- **High-quality resizing** - Uses LANCZOS resampling for crisp results
+- 🖥️ **Your real layout.** Detects every monitor with its true position, size and orientation, and draws them to scale. The primary display is marked with a gold dot.
+- ✂️ **Crop per screen.** A crop window locked to that monitor's exact shape: drag to move, scroll to zoom, with the zoom level shown.
+- ⚡ **Applied instantly.** Hit *Set wallpaper* and the desktop updates right away, no extra steps.
+- 💾 **Remembers your crops.** Each screen's crop is cached, so reopening the app shows every screen as you left it.
+- 📤 **Export the full image.** Save the combined spanning wallpaper as a JPG to keep or share.
+- 🎯 **DPI-aware.** Uses real pixel coordinates on high-DPI and mixed-scaling setups.
 
-### Real-Time Experience
+## How to use
 
-- **Instant preview** - See wallpaper changes immediately as you crop
-- **Caching** - Remembers your last selections between app sessions
-- **Persistent sessions** - Your monitor configurations are saved automatically
-- **Silent operation** - No annoying popups, just smooth workflow
+1. **Open Better-Walls.** Your monitors appear in their real arrangement.
+2. **Click a screen** and choose an image.
+3. **Frame it** in the crop window, then press **Set wallpaper** (or <kbd>Enter</kbd>; <kbd>Esc</kbd> cancels).
+4. **Repeat** for the other screens. The toolbar shows how many are set.
+5. **Export wallpaper…** saves the combined image if you want a copy.
 
-### User Experience
+<p align="center">
+  <img src="docs/crop-window.png" width="300" alt="Crop window for a portrait 1440 × 2560 display with drag and zoom hints">
+</p>
 
-- **Dynamic sizing** - Automatically fits your monitor layout
-- **Click-to-change** - Click any monitor to instantly change its wallpaper
-- **One-click assembly** - Generate final wallpaper with all your selections
+## Getting started
 
-### The code
-
-#### Prerequisites
-
-- Python 3.7+ installed
-- Windows 10/11 (uses Windows-specific APIs)
-
-#### Installation
+**Requirements:** Windows 10 or 11, Python 3.10+.
 
 ```bash
-# Clone the repository
 git clone https://github.com/snoxlax/Better-Walls
 cd Better-Walls
-
-# Install dependencies
 pip install pillow
-
-# Run the app
 python wallApp.py
 ```
 
-#### Creating an Executable
+### Build the .exe
+
+The included spec builds a single windowed exe with the app icon:
 
 ```bash
-# Install PyInstaller
 pip install pyinstaller
-
-# Create executable
-pyinstaller --onefile --windowed wallApp.py
-
-# Run the generated .exe
-cd dist
-wallApp.exe
+pyinstaller --noconfirm wallApp.spec
 ```
 
-#### Architecture
+The result is `dist/wallApp.exe`. It runs on its own, no Python needed. Windows SmartScreen may warn about an unsigned app: choose **More info → Run anyway**.
 
-- **Main app**: `wallApp.py` - Orchestrates the entire application
-- **Monitor detection**: `screenInfo.py` - Uses Windows APIs to enumerate displays
-- **Image cropping**: `imageCrop.py` - Interactive cropping with pan/zoom
-- **Caching system**: Automatic persistence in `%LOCALAPPDATA%\Better-Walls\cache`
+## How it works
 
-#### Key Features
+| File | Role |
+|---|---|
+| `wallApp.py` | Main window: toolbar, monitor map, hover and click handling |
+| `imageCrop.py` | Crop window: pan, zoom and the crop to the monitor's exact resolution |
+| `screenInfo.py` | Monitor detection through the Windows API (positions, work areas, primary display) |
+| `wallpaperService.py` | Stitches the crops into one image, sets it as a *span* wallpaper, manages the cache |
+| `theme.py` | Shared colours and widget styles, taken from the horizon icon |
 
-- **Virtual desktop mapping** - Handles negative coordinates and mixed DPI
-- **Atomic file operations** - Prevents corrupted cache files
-- **Registry integration** - Sets proper Windows wallpaper styles
-- **Error handling** - Graceful fallbacks for edge cases
+- Crops are cached in `%LOCALAPPDATA%\Better-Walls\cache`, one file per monitor, written atomically so a crash can't leave a broken file.
+- Monitors to the left of or above the primary one have negative coordinates; the app maps the whole virtual desktop so they land in the right place.
+- Resizing uses Lanczos resampling, and EXIF rotation is respected, so photos come out sharp and the right way up.
 
-#### Project Structure
+## Ideas
 
-```
-Better-Walls/
-├── wallApp.py          # Main application
-├── imageCrop.py        # Image cropping widget
-├── screenInfo.py       # Monitor detection
-├── README.md           # This file
-├── horizon.ico         # App icon
-└── horizon.svg         # App icon source
-```
+- Saved presets to switch between whole wallpaper setups
+- Drag and drop images onto a screen
+- Fit or fill modes in the crop window
 
-#### Requirements
+## License
 
-- Python 3.7+
-- Pillow (PIL)
-- tkinter (included with Python)
-- Windows 10/11
-
-#### Key Dependencies
-
-```python
-from PIL import Image, ImageTk
-import tkinter as tk
-import ctypes
-import winreg
-```
-
-### Use Cases
-
-- **Gaming setups** - Different wallpapers for gaming monitors
-- **Workstations** - Professional wallpapers for productivity
-- **Art displays** - Showcase different artwork across screens
-- **Content creation** - Visual inspiration across multiple displays
-
-### Contributing
-
-Feel free to fork this repository and make your own improvements! Pull requests are welcome.
-
-### Development Ideas
-
-- Preset wallpaper collections
-- more...
-
-### 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-**Better-Walls** - Because your multi-monitor setup deserves better wallpaper management! 🎨
+MIT
