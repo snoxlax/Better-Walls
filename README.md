@@ -43,7 +43,12 @@ Windows' own settings stretch or tile one image across mixed monitors, and portr
 
 ## Getting started
 
-**Requirements:** Windows 10 or 11, Python 3.10+.
+### Requirements
+
+- **Windows 10 or 11**
+- **Python 3.10+ with pip**, to run the app from source or build the exe. The [python.org installer](https://www.python.org/downloads/) includes pip; tick *Add python.exe to PATH* during setup.
+
+### Run from source
 
 ```bash
 git clone https://github.com/snoxlax/Better-Walls
@@ -52,16 +57,16 @@ pip install pillow
 python wallApp.py
 ```
 
-### Build the .exe
+### Build a standalone .exe
 
-The included spec builds a single windowed exe with the app icon:
+Building needs Python and pip too. The included spec makes a single windowed exe with the app icon:
 
 ```bash
 pip install pyinstaller
 pyinstaller --noconfirm wallApp.spec
 ```
 
-The result is `dist/wallApp.exe`. It runs on its own, no Python needed. Windows SmartScreen may warn about an unsigned app: choose **More info → Run anyway**.
+The result is `dist/wallApp.exe`. Once built, it runs on any Windows 10/11 PC **without Python**, so you can copy it to another machine or pin it to the taskbar. Windows SmartScreen may warn about an unsigned app: choose **More info → Run anyway**.
 
 ## How it works
 
