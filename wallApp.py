@@ -370,6 +370,16 @@ def set_app_icon(root):
         pass
 
 
+def bring_to_front(root):
+    """Show the window on top of everything. The window is created hidden, and
+    Windows may otherwise open it behind whatever the user clicked meanwhile."""
+    root.deiconify()
+    root.lift()
+    root.attributes('-topmost', True)
+    root.after(300, lambda: root.attributes('-topmost', False))
+    root.focus_force()
+
+
 def main():
     enable_dpi_awareness()
     root = tk.Tk()
@@ -377,7 +387,7 @@ def main():
     set_app_icon(root)
 
     WallpaperApp(root)
-    root.deiconify()
+    bring_to_front(root)
     root.mainloop()
 
 
