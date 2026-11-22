@@ -43,6 +43,19 @@ jobs:
           name: Better-Walls
           path: dist/Better-Walls.exe
 
+      # Release notes are this tag's section of CHANGELOG.md (from its
+      # "## vX.Y.Z" heading up to the next "## " heading).
+      - name: Get release notes from CHANGELOG.md
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $lines = Get-Content -Encoding utf8 CHANGELOG.md
+          $start = [array]::IndexOf($lines, "## $env:GITHUB_REF_NAME")
+          if ($start -lt 0) { throw "CHANGELOG.md has no '## $env:GITHUB_REF_NAME' section" }
+          $notes = $lines[($start + 1)..($lines.Count - 1)]
+          $end = [array]::FindIndex([string[]]$notes, [Predicate[string]]{ param($l) $l.StartsWith('## ') })
+          if ($end -ge 0) { $notes = $notes[0..($end - 1)] }
+          ($notes -join "`n").Trim() | Set-Content -Encoding utf8 release-notes.md
+
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -50,4 +63,4 @@ jobs:
         run: >
           gh release create "$env:GITHUB_REF_NAME" dist/Better-Walls.exe
           --title "Better-Walls $env:GITHUB_REF_NAME"
-          --generate-notes
+          --notes-file release-notes.md
